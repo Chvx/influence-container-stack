@@ -1,0 +1,176 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    #ports:
+      #- 27017:27017    # no binding needed, only docker access
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root    # admin username
+      MONGO_INITDB_ROOT_PASSWORD: password    # admin password
+    volumes:
+      - /influencedata/mongodb-data/db:/data/db # persist MongoDB data
+      - /influencedata/mongodb-data/config:/data/config # persist MongoDB configuration
+
+  mongo-express:    # Web-based UI
+    image: mongo-express:1.0.0
+    container_name: mongo-express
+    restart: no
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://root:password@mongo:27017/    # values as configured on the mongo service above
+      ME_CONFIG_BASICAUTH_ENABLED: true
+      ME_CONFIG_BASICAUTH_USERNAME: user
+      ME_CONFIG_BASICAUTH_PASSWORD: userpass
+    depends_on:
+      - mongo
+    profiles:
+      - tools
+      
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - /influencedata/elasticsearch-data/:/usr/share/elasticsearch/data
+    #ports:
+      #- 9200:9200    # no binding needed, only docker access
+      #- 9300:9300   # not needed, cluster port
+      
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    #ports:
+      #- 6379:6379    # no binding needed, only docker access
+    volumes:
+      - /influencedata/redis-data:/data
+
+  influence-client:
+    build: ./influence-client    # build the app
+    container_name: influence-client
+    restart: unless-stopped
+    ports:
+      - 3000:3000    # main client port
+    env_file:
+      - ./influence-client/.env
+    volumes:
+      - ./influence-client:/app    # mount the project inside container for live edits
+      - /app/node_modules    # be wary of container dependencies
+    command: ["npm", "start"]    # dev start
+
+  influence-server:
+    build:    # build the app
+      context: ./influence-server
+      target: runtime
+    image: influence-server    # store the built app as an image to be reused
+    container_name: influence-server
+    restart: unless-stopped
+    ports:
+      - 3001:3001    # API server
+    env_file:
+      - ./influence-server/.env
+    depends_on:
+      - mongo
+      - elasticsearch
+      - redis
+      - ipfs
+    volumes:
+      - ./influence-server:/app
+      - /app/node_modules
+    command: ["npm", "run", "watch"]
+    
+  influence-indexer:
+    image: influence-server    # reuse pre-built image
+    container_name: influence-indexer
+    restart: unless-stopped
+    env_file:
+      - ./influence-server/.env
+    depends_on:
+      - mongo
+      - elasticsearch
+      - redis
+    command: ["npm", "run", "elasticIndexer"]    # run in indexer mode
+    profiles:
+      - indexer
+    
+  influence-starkneteventretriever:
+    image: influence-server
+    container_name: influence-starkneteventretriever
+    restart: unless-stopped
+    env_file:
+      - ./influence-server/.env
+    depends_on:
+      - mongo
+      - elasticsearch
+      - redis
+    command: ["npm", "run", "starknetEventRetriever"]
+    profiles:
+      - indexer
+    
+  influence-eventprocessor:
+    image: influence-server
+    container_name: influence-eventprocessor
+    restart: unless-stopped
+    env_file:
+      - ./influence-server/.env
+    depends_on:
+      - mongo
+      - elasticsearch
+      - redis
+    command: ["npm", "run", "eventProcessor"]
+    profiles:
+      - indexer
+
+  influence-tools:
+    image: influence-server    # reuse pre-built image from previous step
+    restart: no
+    env_file:
+      - ./influence-server/.env
+    depends_on:
+      - mongo
+      - elasticsearch
+      - redis
+    entrypoint: ["node"]
+    profiles:
+      - tools
+
+  influence-test:    # unit testing
+    build:    # build the specific unit-testing image
+      context: ./influence-server
+      target: test
+    container_name: influence-test
+    restart: no
+    # no env file, no dependencies
+    volumes:
+      - ./influence-server:/app
+      - /app/node_modules
+    command: ["npm", "test"]
+    profiles:
+      - tools
+
+  juno:
+    image: nethermind/juno:latest
+    container_name: juno
+    restart: unless-stopped
+    ports:
+      - 6060:6060
+    volumes:
+      - /influencedata/starknet-juno-data:/var/lib/juno
+    command: >
+      --db-path /var/lib/juno
+      --network sepolia
+      --disable-l1-verification
+      --http
+      --http-host 0.0.0.0
+      --http-port "6060"
+    profiles:
+      - starknet
