@@ -367,7 +367,7 @@ The client is accessed by connecting to `http://<InfluenceBoxIP>:3000`.
 The indexer is responsible for connecting to RPC providers and collecting the events representing game actions and updating the database. It does not need the server or client to be running and will start the required dependencies.
 
 ```sh
-docker compose up --profile indexer -d
+docker compose --profile indexer up -d
 ```
 
 # A few helpful things
