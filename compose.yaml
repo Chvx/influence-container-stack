@@ -82,7 +82,6 @@ services:
       - mongo
       - elasticsearch
       - redis
-      - ipfs
     volumes:
       - ./influence-server:/app
       - /app/node_modules
