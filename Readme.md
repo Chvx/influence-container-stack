@@ -171,13 +171,34 @@ cat > ./influence-client/Dockerfile <<'EOF'
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-COPY . .
 RUN npm install
+COPY . .
 EXPOSE 3000
 CMD ["npm", "start"]
 EOF
 ```
 
+**influence-client/.dockerignore:**
+
+```sh
+cat > ./influence-client/.dockerignore <<'EOF'
+node_modules
+npm-debug.log
+yarn-error.log
+
+.git
+.gitignore
+
+.env
+.env.*
+
+Dockerfile
+.dockerignore
+
+dist
+coverage
+EOF
+```
 
 **influence-server/.env:**
 
@@ -235,33 +256,44 @@ cat > ./influence-server/Dockerfile <<'EOF'
 # syntax=docker/dockerfile:1
 
 # Base dependencies
-FROM node:18 AS base
+FROM node:18-slim AS base
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
 
-# Runtime image (alpine)
-FROM node:18.15-alpine as runtime
+# Runtime image
+FROM node:18-slim as runtime
 # Install mongo tools dependencies
-RUN apk add --no-cache mongodb-tools
+RUN apt-get update && apt-get install -y curl gnupg \
+  && curl -fsSL https://pgp.mongodb.com/server-6.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb.gpg \
+  && echo "deb [ signed-by=/usr/share/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/debian bullseye/mongodb-org/6.0 main" \
+     > /etc/apt/sources.list.d/mongodb-org.list \
+  && apt-get update \
+  && apt-get install -y mongodb-database-tools \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=base /app /app
 EXPOSE 3001
 CMD ["npm", "run", "watch"]
 
-# Unit testing image (debian)
-FROM node:18-bullseye-slim AS test
+# Unit testing image
+FROM node:18-slim AS test
 # Mongodb-memory-server dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libcurl4 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=base /app /app
-# Remove the .env file (not needed for tests)
-RUN rm -f /app/.env
 CMD ["npm", "test"]
+
 EOF
+```
+
+**influence-server/.dockerignore:**
+
+```sh
+cp ./influence-client/.dockerignore ./influence-server/
 ```
 
 **influence-server/config/development.json:**
