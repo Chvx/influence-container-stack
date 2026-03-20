@@ -280,7 +280,8 @@ EXPOSE 3001
 CMD ["npm", "run", "watch"]
 
 # Unit testing image
-FROM node:18-slim AS test
+# Debian 11 (bullseye) max for mongo 6
+FROM node:18-bullseye-slim AS test
 # Mongodb-memory-server dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libcurl4 \
