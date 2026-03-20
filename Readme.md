@@ -376,6 +376,12 @@ docker exec -it mongo rm /tmp/influence_prerelease.archive
 
 ## Initialize the ElasticSearch indices
 
+Start the elasticsearch container:
+
+```sh
+docker compose up -d elasticsearch
+```
+
 Build the influence container images and run the initial setup script to create the index structure. Then, index the data available in the database.
 
 ```sh
