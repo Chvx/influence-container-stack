@@ -170,9 +170,11 @@ cat > ./influence-client/Dockerfile <<'EOF'
 
 FROM node:20-alpine
 WORKDIR /app
-COPY package*.json ./
-COPY . .
+COPY package*.json .babelrc .npmrc .nvmrc .slug-post-clean ./
+COPY * ./
+COPY patches ./patches
 RUN npm install
+COPY . .
 EXPOSE 3000
 CMD ["npm", "start"]
 EOF
@@ -226,7 +228,7 @@ REDIS_URL=redis://redis:6379
 CLOUDINARY_URL=
 NODE_ENV=development
 JWT_SECRET=randomstring
-#ETHEREUM_PROVIDER=
+ETHEREUM_PROVIDER=http://localhost:8545
 
 #CONTRACT_PLANETS=
 #CONTRACT_ASTEROID_TOKEN=
