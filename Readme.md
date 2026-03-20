@@ -171,9 +171,8 @@ cat > ./influence-client/Dockerfile <<'EOF'
 FROM node:20-alpine
 WORKDIR /app
 COPY package*.json ./
-COPY .npmrc ./
-RUN npm install
 COPY . .
+RUN npm install
 EXPOSE 3000
 CMD ["npm", "start"]
 EOF
