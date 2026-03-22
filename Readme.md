@@ -6,7 +6,7 @@ The following steps will guide you through setting up your machine to run Influe
 - indexer: the indexer is used to update your local data from retrieving events from Starknet; you can either point it to a RPC provider (e.g. Infura or Alchemy) or to a local node
 - Starknet local node: RPC provider rate-limiting is pretty low and free plans are likely not enough to run the indexer. Setting up a local node is pretty straightforward but will require at least 110GB of storage space.
 
-This guide will **not** cover how to run an Etherum node (the starknet node is standalone and does not validate against L1).
+This guide will **not** cover how to run an Etherum node. The L1 validation of blocks will be done against an RPC provider.
 
 This guide will **not** cover how to run a Starknet Devnet for contracts development (will be tackled later).
 
@@ -16,11 +16,18 @@ You do not need high-end hardware to run this container stack, I am running it a
 
 # Prerequisites and system configuration
 
+## RPC provider API key
+
+If you want to run a Starknet node, in order to support validation of the blocks against L1 you will need access to a Ethereum L1 RPC endpoint. If you do not already have one, you can create an account with Infura or Alchemy, their free plans are enough to cover the load. Look for the websocket endpoint and save the url for later.
+
+- Infura: https://developer.metamask.io/ `wss://sepolia.infura.io/ws/v3/<apikey>`
+- Alchemy: https://www.alchemy.com/ `wss://eth-sepolia.g.alchemy.com/v2/<apikey>`
+
 ## Install Docker
 
 Follow the official doc for apt install: https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository
 
-*Note: if you already have Docker installed, this guide uses `docker compose`, not `docker-compose`.*
+*If you already have Docker installed, please note that this guide uses `docker compose`, not `docker-compose`.*
 
 Grant yourself permission on docker, then restart the machine:
 
@@ -140,11 +147,14 @@ Download the `compose.yaml` file from this repo:
 curl https://raw.githubusercontent.com/Chvx/influence-container-stack/refs/heads/main/compose.yaml -o compose.yaml
 ```
 
+If you are planning on running the Starknet node, update the `--eth-node` value with the websocket address of your L1 RPC provider in the Juno service command (towards the end of the file).
+
 Consider adjusting the following values in the file, especially if not on a trusted network:
 
 - Admin username and password in the mongo service definition as well as in the connection in mongo-express (those credentials should match).
 - User and password in mongo-express (this is the user you'll use in case you want to connect to the frontend).
-- If you changed any of the persistence directories (e.g. `/influencedata` paths), update them.
+
+If you changed any of the persistence directories (`/influencedata/...` paths), update the paths as needed in this file.
 
 **influence-client/.env:**
 
@@ -341,10 +351,10 @@ docker compose up -d juno
 
 ## Restore influence database in mongo
 
-Download the pre-release database dump (link below taken on 2026-03-18; ~500MB):
+Download the pre-release database dump (link below taken on 2026-03-22; ~500MB; indexed to Sepolia block ~7947500):
 
 ```sh
-wget -c https://ipfs.io/ipfs/QmUVNASxHtXtS2yDPWDEwTnJRNSiK2kYJcXCNEcovN6Zrz -O influence_prerelease.archive
+wget -c https://ipfs.io/ipfs/Qmb27LQYF15bzqY3dL5tt8Evyfi1VpV9dw9vXh2wBTiH94 -O influence_prerelease.archive
 ```
 
 Start the mongo container:
