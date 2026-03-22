@@ -167,7 +167,7 @@ services:
     command: >
       --db-path /var/lib/juno
       --network sepolia
-      --disable-l1-verification
+      --eth-node wss://sepolia.infura.io/ws/v3/<apikey>
       --http
       --http-host 0.0.0.0
       --http-port "6060"
