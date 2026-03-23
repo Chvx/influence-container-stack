@@ -70,7 +70,7 @@ sudo mkdir -p /influencedata/redis-data
 sudo mkdir -p /influencedata/starknet-juno-data
 ```
 
-ElasticSearch runs with its own user (ID 1000) that needs to be permitted on the new directory:
+Inside its container, ElasticSearch runs as user uid:gid 1000:0. It needs to be permitted on the new directory for the binding to be accessible:
 
 ```sh
 sudo chown -R 1000:1000 /influencedata/elasticsearch-data/
